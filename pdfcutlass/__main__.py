@@ -36,9 +36,9 @@ def main():
     current_parent = None
 
     if args.split:
-        Path.mkdir(args.output_file, exist_ok=True)
+        Path.mkdir(Path(args.output_file), exist_ok=True)
 
-    for bookmark, next_bookmark in zip(new_outline, new_outline[1:] + [None]):
+    for i, bookmark in enumerate(new_outline):
         if "level" not in bookmark or bookmark["level"] == 1:
             current_parent = writer.add_outline_item(
                 title=bookmark["title"],
@@ -48,12 +48,22 @@ def main():
             if args.split:
                 section_writer = PdfWriter()
 
+                next_bookmark_page = next(
+                    (
+                        e["page_number"] - 1
+                        for e in new_outline[(i + 1) :]  # noqa: E203
+                        if "level" not in e or e["level"] == 1
+                    ),
+                    None,
+                )
+
+                if next_bookmark_page == bookmark["page_number"] - 1:
+                    continue
+
                 page_range = PageRange(
                     slice(
                         bookmark["page_number"] - 1,
-                        next_bookmark["page_number"] - 1
-                        if next_bookmark is not None
-                        else None,
+                        next_bookmark_page,
                     )
                 )
 
@@ -62,26 +72,6 @@ def main():
                     pages=page_range,
                     import_outline=False,
                 )
-
-                # section_start = bookmark["page_number"] - 1
-                # section_end = (
-                #     next_bookmark["page_number"] - 1
-                #     if next_bookmark is not None
-                #     else None
-                # )
-                # section_pages = reader.pages[section_start:section_end]
-
-                # section_writer.append
-
-                # for page in section_pages:
-                #     section_writer.add_page(page)
-
-                # # section_pages =
-
-                # for page in reader.pages[
-                #     bookmark["page_number"] : next_bookmark["page_number"]
-                # ]:
-                #     section_writer.add_page(page)
 
                 with open(
                     Path(args.output_file) / f"{bookmark['title']}.pdf", "wb"
